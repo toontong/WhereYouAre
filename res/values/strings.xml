@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">WhereYouAre</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="action_settings">切换登录帐号</string>
+    <string name="qqLogin">QQ登录</string>
+    <string name="sinaLogin">新浪微博登录</string>
+    <string name="baiduLogin">百度登录</string>
+    <string name="renrenLogin">TODO:人人网登录</string>
+    <string name="kaixinLogin">TODO:开心网登录</string>
+    <string name="back">Back</string>
+
+</resources>
