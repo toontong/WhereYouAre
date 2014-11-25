@@ -1,6 +1,5 @@
 package io.toontong.where;
 
-
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
@@ -27,10 +26,9 @@ import com.baidu.mapapi.model.LatLng;
 import io.toontong.where.R;
 
 /**
- * 显示百度地图与个人位置
- * 本代码大部分来自Baidu的官方demo
+ * 显示百度地图与个人位置 本代码大部分来自Baidu的官方demo
  * */
-public class MapActivity extends Activity{
+public class MapActivity extends Activity {
 
 	// 定位相关
 	private LocationClient mLocClient;
@@ -44,15 +42,15 @@ public class MapActivity extends Activity{
 	// UI相关
 	private Button requestLocButton;
 	private boolean isFirstLoc = true;// 是否首次定位
-	
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-	
-		Intent intent = getIntent();  
-		Bundle bundle = intent.getExtras();  
+
+		Intent intent = getIntent();
+		Bundle bundle = intent.getExtras();
 		int span = bundle.getInt("span"); // 传过来的单位是second
-		
+
 		setContentView(R.layout.activity_map);
 		requestLocButton = (Button) findViewById(R.id.modeBtn);
 		mCurrentMode = LocationMode.NORMAL;
@@ -64,19 +62,22 @@ public class MapActivity extends Activity{
 				case NORMAL:
 					requestLocButton.setText("跟随");
 					mCurrentMode = LocationMode.FOLLOWING;
-					mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(
+					mBaiduMap
+							.setMyLocationConfigeration(new MyLocationConfiguration(
 									mCurrentMode, true, mCurrentMarker));
 					break;
 				case COMPASS:
 					requestLocButton.setText("普通");
 					mCurrentMode = LocationMode.NORMAL;
-					mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(
+					mBaiduMap
+							.setMyLocationConfigeration(new MyLocationConfiguration(
 									mCurrentMode, true, mCurrentMarker));
 					break;
 				case FOLLOWING:
 					requestLocButton.setText("罗盘");
 					mCurrentMode = LocationMode.COMPASS;
-					mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(
+					mBaiduMap
+							.setMyLocationConfigeration(new MyLocationConfiguration(
 									mCurrentMode, true, mCurrentMarker));
 					break;
 				}
@@ -92,16 +93,18 @@ public class MapActivity extends Activity{
 		// 定位初始化
 		mLocClient = new LocationClient(this);
 		mLocClient.registerLocationListener(myListener);
-		
+
 		LocationClientOption option = new LocationClientOption();
-		option.setOpenGps(true);        // 打开gps
-		option.setCoorType("bd09ll");   // 设置坐标类型, 国测局经纬度坐标系：gcj02；百度墨卡托坐标系：bd09; 百度经纬度坐标系：bd09ll
-		
-		option.setScanSpan(span * 1000);       // 每 (n)ms定位一次
+		option.setOpenGps(true); // 打开gps
+		option.setCoorType("bd09ll"); // 设置坐标类型, 国测局经纬度坐标系：gcj02；百度墨卡托坐标系：bd09;
+										// 百度经纬度坐标系：bd09ll
+
+		option.setScanSpan(span * 1000); // 每 (n)ms定位一次
 
 		mLocClient.setLocOption(option);
+		mLocClient.requestLocation();
 		mLocClient.start();
-		
+
 		// 传入null则，表示使用默认位置图标(蓝色小点)
 		mCurrentMarker = null;
 		mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(
@@ -115,15 +118,15 @@ public class MapActivity extends Activity{
 		@Override
 		public void onReceiveLocation(BDLocation location) {
 			// map view 销毁后不在处理新接收的位置
-			if (location == null || mMapView == null){
+			if (location == null || mMapView == null) {
 				Log.e("Map", "location == null|| mMapView == null");
 				return;
 			}
-			
+
 			MyLocationData locData = new MyLocationData.Builder()
 					.accuracy(location.getRadius())
 					// 此处设置开发者获取到的方向信息，顺时针0-360
-					//.direction(100).
+					// .direction(100).
 					.latitude(location.getLatitude())
 					.longitude(location.getLongitude()).build();
 
@@ -135,14 +138,16 @@ public class MapActivity extends Activity{
 				MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(ll);
 				mBaiduMap.animateMapStatus(u);
 			}
-			
-			Log.e("Map", "localtion callback."+ locData.toString());
+
+			Log.e("Map", "localtion callback." + locData.toString());
 		}
+
 		@Override
 		public void onReceivePoi(BDLocation poiLocation) {
-			Log.e("Map", "onReceivePoi callback."+ poiLocation.toString());
+			Log.e("Map", "onReceivePoi callback." + poiLocation.toString());
 		}
-	}	
+	}
+
 	@Override
 	protected void onPause() {
 		mMapView.onPause();
@@ -166,5 +171,4 @@ public class MapActivity extends Activity{
 		super.onDestroy();
 	}
 
-	
 }

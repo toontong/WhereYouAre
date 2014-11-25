@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="app_name">WhereYouAre</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">切换登录帐号</string>
@@ -10,5 +8,9 @@
     <string name="renrenLogin">TODO:人人网登录</string>
     <string name="kaixinLogin">TODO:开心网登录</string>
     <string name="back">Back</string>
-
+    <string name="openMap">打开地图</string>
+    <string name="createPoi">创建POI数据与用户</string>
+    <string name="myLastLocation">查看我最后更新位置</string>
+    <string name="locationSpan">定位时间间隔(秒):</string>
+    <string name="locationSpanVaule">3</string>
 </resources>

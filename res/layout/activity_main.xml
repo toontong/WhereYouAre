@@ -10,23 +10,11 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="io.toontong.where.MainActivity" >
 
-    <TextView
-        android:id="@+id/textViewResult"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="22"
-        android:textAppearance="?android:attr/textAppearanceLarge" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical" >
-        
         <TextView
             android:id="@+id/textView1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="定位时间间隔(秒):"
+            android:text="@string/locationSpan"
             android:textAppearance="?android:attr/textAppearanceLarge" />
 
         <EditText
@@ -34,7 +22,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ems="10"
-            android:hint="3"
+            android:hint="@string/locationSpanVaule"
             android:inputType="number" >
 
             <requestFocus />
@@ -42,8 +30,27 @@
         
         <Button
             android:id="@+id/startLocalBtn"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="开启定位" />
-    </LinearLayout>
+            android:text="@string/openMap" />
+
+        <Button
+            android:id="@+id/createPoiBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/createPoi" />
+                
+        <Button
+            android:id="@+id/myLastLocationBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/myLastLocation" />
+
+        <TextView
+            android:id="@+id/textViewResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
 </LinearLayout>
