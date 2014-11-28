@@ -29,7 +29,7 @@ import io.toontong.where.R;
  * 显示百度地图与个人位置 本代码大部分来自Baidu的官方demo
  * */
 public class MapActivity extends Activity {
-
+	
 	// 定位相关
 	private LocationClient mLocClient;
 	private MyLocationListenner myListener = new MyLocationListenner();
@@ -38,6 +38,7 @@ public class MapActivity extends Activity {
 
 	private MapView mMapView;
 	private BaiduMap mBaiduMap;
+	public boolean isStartedLocation;
 
 	// UI相关
 	private Button requestLocButton;
@@ -46,12 +47,13 @@ public class MapActivity extends Activity {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
+		setContentView(R.layout.activity_map);
+		
 		Intent intent = getIntent();
 		Bundle bundle = intent.getExtras();
 		int span = bundle.getInt("span"); // 传过来的单位是second
 
-		setContentView(R.layout.activity_map);
+		
 		requestLocButton = (Button) findViewById(R.id.modeBtn);
 		mCurrentMode = LocationMode.NORMAL;
 		requestLocButton.setText("普通");
@@ -91,7 +93,7 @@ public class MapActivity extends Activity {
 		// 开启定位图层
 		mBaiduMap.setMyLocationEnabled(true);
 		// 定位初始化
-		mLocClient = new LocationClient(this);
+		mLocClient = ((WhereApplication)getApplication()).getLocClient();
 		mLocClient.registerLocationListener(myListener);
 
 		LocationClientOption option = new LocationClientOption();
@@ -104,22 +106,27 @@ public class MapActivity extends Activity {
 		mLocClient.setLocOption(option);
 		mLocClient.requestLocation();
 		mLocClient.start();
+		isStartedLocation = true;
 
 		// 传入null则，表示使用默认位置图标(蓝色小点)
 		mCurrentMarker = null;
 		mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(
 				mCurrentMode, true, null));
+		
+//		MapStatusUpdate update = MapStatusUpdateFactory.zoomBy(10);
+//		mBaiduMap.setMapStatus(update);
 	}
 
 	public class MyLocationListenner implements BDLocationListener {
 		/**
 		 * 定位SDK监听函数
 		 */
+		private static final String TAG = "where.Map.lis"; 
 		@Override
 		public void onReceiveLocation(BDLocation location) {
 			// map view 销毁后不在处理新接收的位置
 			if (location == null || mMapView == null) {
-				Log.e("Map", "location == null|| mMapView == null");
+				Log.w(TAG, "location == null|| mMapView == null");
 				return;
 			}
 
@@ -138,24 +145,27 @@ public class MapActivity extends Activity {
 				MapStatusUpdate u = MapStatusUpdateFactory.newLatLng(ll);
 				mBaiduMap.animateMapStatus(u);
 			}
-
-			Log.e("Map", "localtion callback." + locData.toString());
+			Log.d(TAG, "localtion callback." + locData.toString());
 		}
 
 		@Override
 		public void onReceivePoi(BDLocation poiLocation) {
-			Log.e("Map", "onReceivePoi callback." + poiLocation.toString());
+			Log.w(TAG, "onReceivePoi callback." + poiLocation.toString());
 		}
 	}
 
 	@Override
 	protected void onPause() {
 		mMapView.onPause();
+		mLocClient.unRegisterLocationListener(myListener);
+		isStartedLocation = false;
 		super.onPause();
 	}
 
 	@Override
 	protected void onResume() {
+		mLocClient.registerLocationListener(myListener);
+		isStartedLocation = false;
 		mMapView.onResume();
 		super.onResume();
 	}
@@ -164,8 +174,10 @@ public class MapActivity extends Activity {
 	protected void onDestroy() {
 		// 退出时销毁定位
 		mLocClient.stop();
+		isStartedLocation = false;
 		// 关闭定位图层
 		mBaiduMap.setMyLocationEnabled(false);
+		mLocClient.unRegisterLocationListener(myListener);
 		mMapView.onDestroy();
 		mMapView = null;
 		super.onDestroy();

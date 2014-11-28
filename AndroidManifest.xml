@@ -5,8 +5,8 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="8"
-        android:targetSdkVersion="21" />
+        android:minSdkVersion="7"
+        android:targetSdkVersion="17" />
     <!-- Frontia框架的公共权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -28,7 +28,7 @@
 
     <!-- 使用GPS获取用户精确定位信息 -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"></uses-permission>
-    
+
     <application
         android:name="io.toontong.where.WhereApplication"
         android:allowBackup="true"
@@ -49,9 +49,23 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SocialActivity"></activity>
         <activity android:name=".MapActivity"></activity>
+        <activity android:name=".SocialActivity"></activity>
+        <activity android:name=".CreateRoleActivity"></activity>
 
+        <!-- 使用百度push 应用自定义消息receiver声明 -->
+        <receiver android:name="io.toontong.where.push.BDPushMessageReceiver"
+            android:permission="oem.permission.SENDMAIL">
+            <intent-filter>
+                <!-- 接收push消息 -->
+                <action android:name="com.baidu.android.pushservice.action.MESSAGE" />
+                <!-- 接收bind,unbind,fetch,delete等反馈消息 -->
+                <action android:name="com.baidu.android.pushservice.action.RECEIVE" />
+                <action android:name="com.baidu.android.pushservice.action.notification.CLICK" />
+            </intent-filter>
+        </receiver>
+        
+        <!-- push必须的receviver和service声明 -->
         <!-- push service -->
         <receiver 
             android:name="com.baidu.android.pushservice.PushServiceReceiver"
@@ -65,8 +79,8 @@
             </intent-filter>
         </receiver>
 
-        <receiver 
-            android:name="com.baidu.android.pushservice.RegistrationReceiver"
+        <receiver android:name="com.baidu.android.pushservice.RegistrationReceiver"
+            android:permission="oem.permission.SENDMAIL"
             android:process=":bdservice_v1">
             <intent-filter>
                 <action android:name="com.baidu.android.pushservice.action.METHOD" />
@@ -77,8 +91,20 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
-        
         <service
+            android:permission="oem.permission.SENDMAIL"
+            android:name="com.baidu.android.pushservice.PushService"
+            android:exported="true"
+            android:process=":bdservice_v1"  >
+            <intent-filter>
+                <action android:name="com.baidu.android.pushservice.action.PUSH_SERVICE" />
+            </intent-filter>
+        </service>
+        <!-- push结束 -->
+
+        <!-- 百度定位service -->
+        <service
+            android:permission="oem.permission.SENDMAIL"
             android:name="com.baidu.location.f"
             android:enabled="true"
             android:process=":remote" >

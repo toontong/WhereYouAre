@@ -1,5 +1,6 @@
 package io.toontong.where;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 
 import android.app.Activity;
@@ -73,11 +74,14 @@ public class SocialActivity extends Activity {
 		mResultTextView.setText("Platform:" + user.getPlatform() + "\n"
 				+ "social id: " + user.getId() + "\n" + "social name: "
 				+ user.getName() + "\n" + "token: " + user.getAccessToken()
-				+ "\n" + "expired: " + user.getExpiresIn() + "\n now time:"
+				+ "\n" + "expired : " +user.getExpiresIn() + "\n" 
+				+ new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+				.format(user.getExpiresIn() * 1000) 
+				+ "\nnow time:"
 				+ time);
 
-		Config cfg = new Config(this);
-		cfg.saveUser(user);// user.getId(), user.getName());
+
+		((WhereApplication)getApplication()).onLoginSuccess(user);
 
 		backBtn.setVisibility(View.VISIBLE);
 		qqBtn.setVisibility(View.INVISIBLE);
@@ -135,13 +139,15 @@ public class SocialActivity extends Activity {
 		backBtn.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				Intent intent = new Intent(SocialActivity.this,
-						MainActivity.class);
-				startActivity(intent);
+				switchMainActivity();
 			}
 		});
 	}
-
+	private void switchMainActivity(){
+		Intent intent = new Intent(SocialActivity.this,
+				MainActivity.class);
+		startActivity(intent);
+	}
 	private void startSinaLogin() {
 		mAuthorization.enableSSO(MediaType.SINAWEIBO.toString(),
 				ApiKeyConf.SINA_APP_KEY);

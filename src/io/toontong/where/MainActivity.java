@@ -1,6 +1,9 @@
 package io.toontong.where;
 
-import java.util.List;
+import io.toontong.where.poi.BaiduPoiClient.RoleInfo;
+
+import java.text.SimpleDateFormat;
+
 
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -20,21 +23,11 @@ import android.widget.Toast;
 import com.baidu.frontia.FrontiaUser;
 import com.baidu.mapapi.SDKInitializer;
 
-//import retrofit.Callback;
-//import retrofit.RetrofitError;
-//import retrofit.client.Response;
-
-import io.toontong.where.poi.BaiduPoiClient;
-import io.toontong.where.poi.CreatePoiResult;
-import io.toontong.where.poi.PoiListResult;
-import io.toontong.where.poi.Callbacker;
-
 public class MainActivity extends ActionBarActivity {
-	private static final String TAG = "Main";
+	private static final String TAG = "where.Main";
 
 	private TextView mResultTextView;
-	private FrontiaUser mUser;
-	private Config mConfig;
+	private WhereApplication app;
 
 	private void showText(String msg) {
 		Log.e(TAG, msg);
@@ -54,31 +47,41 @@ public class MainActivity extends ActionBarActivity {
 			Log.d(TAG, "action: " + s);
 
 			if (s.equals(SDKInitializer.SDK_BROADTCAST_ACTION_STRING_PERMISSION_CHECK_ERROR)) {
-				toastMsg("key 验证出错! 请在 AndroidManifest.xml 文件中检查 key 设置");
-			} else if (s
-					.equals(SDKInitializer.SDK_BROADCAST_ACTION_STRING_NETWORK_ERROR)) {
-				toastMsg("网络出错");
+				String err = "key 验证出错! 请在 AndroidManifest.xml 文件中检查 key 设置";
+				toastMsg(err);
+				showText(err);
+			} else if (s.equals(SDKInitializer.SDK_BROADCAST_ACTION_STRING_NETWORK_ERROR)) {
+				String err = "网络出错";
+				toastMsg(err);
+				showText(err);
 			}
 		}
 	}
-
+	
 	private SDKReceiver mReceiver;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		mConfig = new Config(this);
+		
+		app = (WhereApplication)getApplication();
 		mResultTextView = (TextView) findViewById(R.id.textViewResult);
-
+		
+		setupViews();
+		
 		// 注册 SDK 广播监听者
 		IntentFilter iFilter = new IntentFilter();
 		iFilter.addAction(SDKInitializer.SDK_BROADTCAST_ACTION_STRING_PERMISSION_CHECK_ERROR);
 		iFilter.addAction(SDKInitializer.SDK_BROADCAST_ACTION_STRING_NETWORK_ERROR);
 		mReceiver = new SDKReceiver();
 		registerReceiver(mReceiver, iFilter);
+		
+		
+		
+		app.setMainActivity(this);
+		app.startPush();
 
-		setupViews();
 	}
 
 	@Override
@@ -93,130 +96,123 @@ public class MainActivity extends ActionBarActivity {
 		startBtn.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				TextView frequence = (TextView) findViewById(R.id.frequence);
-				int span = 3; // default values
-				try {
-					span = Integer.valueOf(frequence.getText().toString());
-				} catch (Exception e) {
-					//空输入, 使用默认值
-				}
-
-				Intent intent = new Intent(MainActivity.this, MapActivity.class);
-				intent.putExtra("span", span);
-				startActivity(intent);
+				switchMapActivity();
 			}
 		});
-		
-		
-		Button createPoiBtn = (Button) findViewById(R.id.createPoiBtn);
-		createPoiBtn.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-					if( mUser != null){
-						BaiduPoiClient.createPoi(114, 35, 1, 
-							mUser.getId(), "role", BaiduPoiClient.ROLE_ACL_CREATOR, 
-							mUser.getName(), mUser.getPlatform (), 
-							new Callbacker<CreatePoiResult>(){
-								@Override
-								public void onSuccess(CreatePoiResult result){
-									switch (result.status){
-									case 0:
-										mResultTextView.setText(
-												"status:" + result.status +"\n"
-												+ "message:" + result.message +"\n"
-												+ "id:" + result.id);
-										mConfig.saveUserPoiID(mUser, result.id);
-										break;
-									case 3002://唯一索引(userid)重复
-										mResultTextView.setText("用户数据已创建．");
-										break;
-									default:
-										mResultTextView.setText(
-											"status:" + result.status +"\n"
-											+ "message:" + result.message +"\n");
-									}
-								}
 
-								@Override
-								public void onFail(Exception error) {
-									mResultTextView.setText(error.toString());
-								}
-							});
-					}else{
-						mResultTextView.setText("请先登录!");
-					}
-				}
-			});
-
-		Button lastLocaltionBtn = (Button) findViewById(R.id.myLastLocationBtn);
-		lastLocaltionBtn.setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				if (mUser != null) {
-					BaiduPoiClient.getPoiByUserId(mUser.getId(),
-							new Callbacker<PoiListResult>() {
-								@Override
-								public void onSuccess(PoiListResult result){
-									if (result == null){
-										mResultTextView.setText("list-Poi-API reutrn null resutl.");
-										return;
-									}
-									
-									mResultTextView.setText(
-										"status:" + result.status +"\n"
-										+ "message:" + result.message +"\n"
-										+ "total:" + result.total + "\n"
-										+ "size:" + result.size + "\n");
-									if (result.size == 0 || result.pois == null || result.pois.isEmpty()){
-										mResultTextView.setText(mResultTextView.getText()
-												+ "poi isEmpty.");
-									}else{
-										PoiListResult.Poi poi = result.pois.get(0);
-										
-										mResultTextView.setText(mResultTextView.getText()
-											+ "poi:[" + poi.location.get(0) + ","
-											+ poi.location.get(1) + "]\n" 
-											+ "userid:" + poi.userid + "\n"
-											+ "role:" + poi.role + "\n"
-											+ "role_acl:" + poi.role_acl);
-									}
-								}
-								@Override
-								public void onFail(Exception e) {
-									mResultTextView.setText(e.toString());
-								}
-							});
-				} else {
-					mResultTextView.setText("请先登录!");
-				}
-			}
-		});
+//		Button createPoiBtn = (Button) findViewById(R.id.createPoiBtn);
+//		createPoiBtn.setOnClickListener(new OnClickListener() {
+//			@Override
+//			public void onClick(View v) {
+//					FrontiaUser user = app.getUser();
+//					if( user != null){
+//
+//					}else{
+//						mResultTextView.setText("请先登录!");
+//					}
+//				}
+//			});
+//
+//		Button lastLocaltionBtn = (Button) findViewById(R.id.myLastLocationBtn);
+//		lastLocaltionBtn.setOnClickListener(new OnClickListener() {
+//			@Override
+//			public void onClick(View v) {
+//				FrontiaUser user = app.getUser();
+//				if (user != null) {
+//					
+//				} else {
+//					mResultTextView.setText("请先登录!");
+//				}
+//			}
+//		});
+//
+//		Button createRoleBtn = (Button) findViewById(R.id.createRoleBtn);
+//		createRoleBtn.setOnClickListener(new OnClickListener() {
+//			@Override
+//			public void onClick(View v) {
+//				switchCreateRoleActivity();
+//			}});
+			
 	}
 
-	private void showUserInfo() {
-		mUser = mConfig.getUser();
+	private void switchLoginActivity(){
+		Intent intent = new Intent(MainActivity.this, SocialActivity.class);
+		startActivity(intent);
+	}
 
-		if (null == mUser) {
-			Intent intent = new Intent(MainActivity.this, SocialActivity.class);
-			startActivity(intent);
-		} else {
-			Log.d(TAG, "mUser not null");
-			showText("Platform:" + mUser.getPlatform() + "\n" + "social id: "
-					+ mUser.getId() + "\n" + "social name: " + mUser.getName()
-					+ "\n");
+	public void switchCreateRoleActivity(){
+		Intent intent = new Intent(MainActivity.this, CreateRoleActivity.class);
+		startActivity(intent);
+	}
+	
+	private void switchMapActivity(){
+		TextView frequence = (TextView) findViewById(R.id.frequence);
+		int span = 3; // default values
+		try {
+			span = Integer.valueOf(frequence.getText().toString());
+		} catch (Exception e) {
+			//空输入, 使用默认值
 		}
+
+		Intent intent = new Intent(MainActivity.this, MapActivity.class);
+		intent.putExtra("span", span);
+		startActivity(intent);
 	}
 
-	@Override
-	protected void onStart() {
-		showUserInfo();
-		super.onResume();
+	/*
+	 * 程序主流程:
+	 * 1). 未登录的 --> 先登录
+	 * 2). 登录成功 --> 获取最后POI --> 判断是否为已注册用户 --> 有POI是旧用户
+	 * 3). 已注册的 --> POI中判断是否有加入组-->没有-->创建或加入一个组
+	 * 4). 完成以上三步,进入主流程:
+	 *     <1>.启动Push + 启动定位
+	 *     <2>.位置发生变化或在设定的时间段内每个时间间隔上报位置(即更新POI)
+	 *     <3>.接入到Push消息处理
+	 *     <4>. 
+	 */
+	private void mainProcess() {
+		FrontiaUser user = app.getUser();
+		if (null == user) {
+			this.switchLoginActivity();
+			return;
+		} 
+		
+		RoleInfo roleInfo = app.getRoleInfoFromLocal();
+		if (roleInfo == null){
+			this.switchCreateRoleActivity();
+			return;
+		}
+		
+		if(user.getExpiresIn() * 1000 <= System.currentTimeMillis()){
+			Log.w(TAG, "accessToken Expires, pls Login.");
+			toastMsg("登录信息过期,请重新登录!");
+			this.switchLoginActivity();
+			return;
+		}
+		
+		Log.d(TAG, "mUser not null");
+		StringBuffer sb = new StringBuffer();
+		sb.append("来自[");
+		sb.append(user.getPlatform());
+		sb.append("]的登录用户:\n");
+		sb.append(user.getName());
+		sb.append("\n欢迎使用 Where.\n");
+		sb.append("您所在组为[");
+		sb.append(roleInfo.role);
+		sb.append("],共有成员[n]个.你们之间位置共享.");
+        showText(sb.toString());
+		app.startPush();
+
 	}
+
+
+
 
 	@Override
 	protected void onResume() {
-		showUserInfo();
+		Log.d(TAG, "onResume");
 		super.onResume();
+		mainProcess();
 	}
 
 	@Override
@@ -233,8 +229,7 @@ public class MainActivity extends ActionBarActivity {
 		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
 		if (id == R.id.action_settings) {
-			Intent intent = new Intent(MainActivity.this, SocialActivity.class);
-			startActivity(intent);
+			switchLoginActivity();
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
