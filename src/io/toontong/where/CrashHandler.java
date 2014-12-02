@@ -8,7 +8,7 @@ import android.util.Log;
  * Created  on 13-12-13.
  */
 public class CrashHandler implements Thread.UncaughtExceptionHandler {
-	private static String TAG = "where.cras";
+	private static String TAG = "where.Exception";
  
     private static CrashHandler instance;  //单例引用，这里我们做成单例的，因为我们一个应用程序里面只需要一个UncaughtExceptionHandler实例
  
@@ -28,9 +28,10 @@ public class CrashHandler implements Thread.UncaughtExceptionHandler {
  
     public void uncaughtException(Thread thread, Throwable ex) {  //当有未处理的异常发生时，就会来到这里。。
         Log.e(TAG, "uncaughtException, thread: " + thread
-                + " name: " + thread.getName() + " id: " + thread.getId() + "exception: "
+                + " name: " + thread.getName() + " id: " + thread.getId() 
+                + " ,exception: "
                 + ex);
-
+        Log.e(TAG, thread.getStackTrace().toString());
     }
  
  

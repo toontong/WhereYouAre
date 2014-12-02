@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -38,7 +39,7 @@ public class MapActivity extends Activity {
 
 	private MapView mMapView;
 	private BaiduMap mBaiduMap;
-	public boolean isStartedLocation;
+	private WhereApplication app;
 
 	// UI相关
 	private Button requestLocButton;
@@ -48,6 +49,8 @@ public class MapActivity extends Activity {
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_map);
+		
+		app = ((WhereApplication)getApplication());
 		
 		Intent intent = getIntent();
 		Bundle bundle = intent.getExtras();
@@ -93,28 +96,15 @@ public class MapActivity extends Activity {
 		// 开启定位图层
 		mBaiduMap.setMyLocationEnabled(true);
 		// 定位初始化
-		mLocClient = ((WhereApplication)getApplication()).getLocClient();
+		mLocClient = app.getLocClient();
 		mLocClient.registerLocationListener(myListener);
 
-		LocationClientOption option = new LocationClientOption();
-		option.setOpenGps(true); // 打开gps
-		option.setCoorType("bd09ll"); // 设置坐标类型, 国测局经纬度坐标系：gcj02；百度墨卡托坐标系：bd09;
-										// 百度经纬度坐标系：bd09ll
-
-		option.setScanSpan(span * 1000); // 每 (n)ms定位一次
-
-		mLocClient.setLocOption(option);
-		mLocClient.requestLocation();
-		mLocClient.start();
-		isStartedLocation = true;
+		app.startLocation(span);
 
 		// 传入null则，表示使用默认位置图标(蓝色小点)
 		mCurrentMarker = null;
 		mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(
 				mCurrentMode, true, null));
-		
-//		MapStatusUpdate update = MapStatusUpdateFactory.zoomBy(10);
-//		mBaiduMap.setMapStatus(update);
 	}
 
 	public class MyLocationListenner implements BDLocationListener {
@@ -156,16 +146,16 @@ public class MapActivity extends Activity {
 
 	@Override
 	protected void onPause() {
+		mLocClient.stop();
 		mMapView.onPause();
 		mLocClient.unRegisterLocationListener(myListener);
-		isStartedLocation = false;
 		super.onPause();
 	}
 
 	@Override
 	protected void onResume() {
+		mLocClient.stop();
 		mLocClient.registerLocationListener(myListener);
-		isStartedLocation = false;
 		mMapView.onResume();
 		super.onResume();
 	}
@@ -174,7 +164,6 @@ public class MapActivity extends Activity {
 	protected void onDestroy() {
 		// 退出时销毁定位
 		mLocClient.stop();
-		isStartedLocation = false;
 		// 关闭定位图层
 		mBaiduMap.setMyLocationEnabled(false);
 		mLocClient.unRegisterLocationListener(myListener);

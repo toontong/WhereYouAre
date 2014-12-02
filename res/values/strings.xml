@@ -1,16 +1,18 @@
 <resources>
     <string name="app_name">WhereYouAre</string>
     <string name="hello_world">Hello world!</string>
-    <string name="action_settings">切换登录帐号</string>
+    <string name="action_switch_account">切换登录帐号</string>
+    <string name="action_settings">设置</string>
     <string name="qqLogin">QQ登录</string>
     <string name="sinaLogin">新浪微博登录</string>
     <string name="baiduLogin">百度登录</string>
     <string name="renrenLogin">TODO:人人网登录</string>
     <string name="kaixinLogin">TODO:开心网登录</string>
-    <string name="back">Back</string>
+    <string name="back">返回</string>
     <string name="openMap">打开地图</string>
-    <string name="createPoi">创建POI数据与用户</string>
-    <string name="myLastLocation">查看我最后更新位置</string>
+    <string name="changedRole">更改组织</string>
+    <string name="myInformation">我的信息</string>
     <string name="locationSpan">定位时间间隔(秒):</string>
     <string name="locationSpanVaule">3</string>
+    <string name="imageHead">头像 </string>
 </resources>

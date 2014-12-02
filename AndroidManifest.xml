@@ -5,7 +5,7 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="7"
+        android:minSdkVersion="14"
         android:targetSdkVersion="17" />
     <!-- Frontia框架的公共权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -52,6 +52,7 @@
         <activity android:name=".MapActivity"></activity>
         <activity android:name=".SocialActivity"></activity>
         <activity android:name=".CreateRoleActivity"></activity>
+        <activity android:name=".SettingsActivity"></activity>
 
         <!-- 使用百度push 应用自定义消息receiver声明 -->
         <receiver android:name="io.toontong.where.push.BDPushMessageReceiver"
@@ -101,7 +102,9 @@
             </intent-filter>
         </service>
         <!-- push结束 -->
-
+    
+        <receiver android:name="io.toontong.where.AlarmReceiver"></receiver>
+        
         <!-- 百度定位service -->
         <service
             android:permission="oem.permission.SENDMAIL"

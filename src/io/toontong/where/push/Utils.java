@@ -22,11 +22,7 @@ public class Utils {
 
 	// 用share preference来实现是否绑定的开关。在ionBind且成功时设置true，unBind且成功时设置false
 	public static boolean hasBind(Context context) {
-		SharedPreferences sp = PreferenceManager
-				.getDefaultSharedPreferences(context);
-		
-		String userId = sp.getString(KEY_PUSH_USER_ID, "");
-		return "".equalsIgnoreCase(userId);
+		return !"".equalsIgnoreCase(getPushUserId(context));
 	}
 
 	public static void setBind(Context context, String userId, String channelId) {
@@ -43,6 +39,18 @@ public class Utils {
 		editor.putString(KEY_PUSH_CHANNEL_ID, channelId);
 
 		editor.commit();
+	}
+
+	public static String getPushUserId(Context context){
+		SharedPreferences sp = PreferenceManager
+				.getDefaultSharedPreferences(context);
+		
+		return sp.getString(KEY_PUSH_USER_ID, "");
+	}
+	public static String getPushChannelId(Context context){
+		SharedPreferences sp = PreferenceManager
+				.getDefaultSharedPreferences(context);
+		return sp.getString(KEY_PUSH_CHANNEL_ID, "");
 	}
 
 	public static List<String> getTagsList(String originalText) {

@@ -1,12 +1,15 @@
 package io.toontong.where;
 
-import java.util.List;
 import java.util.ArrayList;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
+
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.os.SystemClock;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
@@ -14,8 +17,8 @@ import android.widget.Toast;
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
+import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.SDKInitializer;
-import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.android.pushservice.PushConstants;
 import com.baidu.android.pushservice.PushManager;
@@ -23,6 +26,11 @@ import com.baidu.frontia.Frontia;
 import com.baidu.frontia.FrontiaApplication;
 import com.baidu.frontia.FrontiaUser;
 import com.baidu.frontia.api.FrontiaPush;
+import com.baidu.frontia.api.FrontiaPushUtil;
+import com.baidu.frontia.api.FrontiaPushListener.PushMessageListener;
+import com.baidu.frontia.api.FrontiaPushUtil.NotificationContent;
+
+import com.google.gson.Gson;
 
 import io.toontong.where.poi.BaiduPoiClient;
 import io.toontong.where.poi.BaiduPoiClient.EnumRole;
@@ -32,17 +40,18 @@ import io.toontong.where.poi.CreatePoiResult;
 import io.toontong.where.poi.PoiInfoList;
 import io.toontong.where.poi.PoiInfoList.PoiInfo;
 import io.toontong.where.poi.UpdatePoiResult;
+import io.toontong.where.push.Utils;
 
 
 public class WhereApplication extends FrontiaApplication {
 	private static final String TAG = "Wher.App";
+	private static final int AlarmRequestCode = 0; // alarm uiq-id
 	
 	private FrontiaUser mUser;
 	private Config mConfig;
 	
 	private BaiduPoiClient mBDPoiCli;
 	private MainActivity mMainActivity;
-	private MapActivity mMapActivity;
 	private CreateRoleActivity mRoleActivity; 
 
 	// 定位相关
@@ -51,7 +60,7 @@ public class WhereApplication extends FrontiaApplication {
 	
 	private PoiInfo mLastPoi;
 	private long mLastUpdatePoiTime;
-	private static final long Update_Span = 30 * 1000; // 30 second
+	private static final long Update_Span = 1 * 1000; // 30 second
 	private RoleInfo mRoleInfo;
 
 	private boolean mIsGettingPoi; // 当调用网络API-Get-Poi时,可能比较耗时,防止并发
@@ -73,7 +82,8 @@ public class WhereApplication extends FrontiaApplication {
 		mIsGettingPoi = false;
 		mConfig = new Config(this);
 		mLocClient = new LocationClient(this);
-		mBDPoiCli = new BaiduPoiClient(ApiKeyConf.BAIDU_ACCESS_KEY, ApiKeyConf.BAIDU_GEO_TABLE_ID);
+		mBDPoiCli = new BaiduPoiClient(ApiKeyConf.BAIDU_ACCESS_KEY, 
+				ApiKeyConf.BAIDU_GEO_TABLE_ID);
 		mLastUpdatePoiTime = 0;
 
 		mUser = mConfig.getUser(); // maybe return null
@@ -83,10 +93,13 @@ public class WhereApplication extends FrontiaApplication {
 		
 		CrashHandler handler = CrashHandler.getInstance();
 		handler.init(getApplicationContext());
+
+		startPush();
+
 	}
 	
 	private void toastMsg(String msg) {
-		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+		Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 	}
 	
 	public void onLoginSuccess(FrontiaUser user){
@@ -123,10 +136,88 @@ public class WhereApplication extends FrontiaApplication {
 		mRoleInfo = mConfig.getRoleInfo(Long.valueOf(mUser.getId()));
 		return mRoleInfo;
 	}
+	
+	public void getRoleMembers(String role, Callbacker<PoiInfoList> callback){
+		mBDPoiCli.getPoiByUserRole(role, callback);
+	}
+	
+	public void saveRoleMembers(PoiInfoList poiInfos){
+		if (mUser == null)return;
+		Gson gson = new Gson();
+		try{
+			String json =gson.toJson(poiInfos);
+			mConfig.saveRoleMembers(Long.valueOf(mUser.getId()), json);
+		}catch(Exception e){
+			Log.e(TAG, e.toString());
+		}
+	}
+	
+	
+	/**
+	 * @return 网络不好时,尝试从本地持久化数据中读取
+	 */
+	public PoiInfoList getRoleMembersFromLocal(){
+		if (mUser == null)
+			return null;
+		
+		Gson gson = new Gson();
+		try{
+			
+			String json = mConfig.getRoleMembers(Long.valueOf(mUser.getId()));
+			if ("".equals(json))
+				return null;
+			
+			PoiInfoList poiInfos =gson.fromJson(json, PoiInfoList.class);
+			return poiInfos;
+		}catch(Exception e){
+			Log.e(TAG, e.toString());
+		}
+		return null;
+	}
+	
+	// 设置坐标类型, 国测局经纬度坐标系：gcj02；百度墨卡托坐标系：bd09;  百度经纬度坐标系：bd09ll
+	private static final String CoorType="gcj02";
+	public int startLocation(int spanSecond){
+		if(mLocClient.isStarted()){
+			return 0;
+		}
 
+		LocationClientOption option = new LocationClientOption();
+		option.setOpenGps(mConfig.isGpsOpen()); // 打开gps
+		option.setCoorType(CoorType); 
+		option.setScanSpan(spanSecond * 1000); // 每 (n)ms定位一次
+		mLocClient.setLocOption(option);
+		
+		mLocClient.start();
+		
+		int ret = mLocClient.requestLocation();
+		switch(ret){
+		case 0://success
+		case 1://"service还没启动,但其是异步的,可以不管
+			break;
+		case 2:
+			Toast.makeText(this, "没有监听处理", Toast.LENGTH_SHORT).show();
+			break;
+		case 6:
+			Toast.makeText(this, "两次请求时间太短", Toast.LENGTH_SHORT).show();
+			break;
+		default:
+			Toast.makeText(this, "requestLocation()=" + ret, Toast.LENGTH_SHORT).show();
+		}
+
+		return ret;
+	}
+	public void stopLocation(){
+		mLocClient.stop();
+	}
+	
 	public LocationClient getLocClient(){
 		// 给map-activity用
 		return mLocClient;
+	}
+	
+	public long getPushCount(){
+		return mConfig.getPushCount();
 	}
 	
 	public void setMainActivity(MainActivity acvitity){
@@ -270,14 +361,18 @@ public class WhereApplication extends FrontiaApplication {
 	public void onMessageReceived(String msg){
 		// 收到push的消息
 		Log.d(TAG, msg);
-		
-		Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-		mLocClient.start();
+		try{
+			mConfig.pushPuls();
+			this.startLocation(1);
+		}catch(Exception e){
+			Log.e(TAG, e.getStackTrace().toString());
+		}
 		mGetPushMsg = true;
-		
 	}
-
-	private class Config {
+	public Config getConfig(){
+		return mConfig;
+	}
+	public class Config {
 		//只有app才知道持久化配置信息 
 		private static final String KEY_ID = "Social_id";
 		private static final String KEY_NAME = "Social_name";
@@ -286,7 +381,12 @@ public class WhereApplication extends FrontiaApplication {
 		private static final String KEY_PLATFORM = "Social_Platform";
 		private static final String KEY_USER_POI_ID = "%d_poi_id";
 		private static final String KEY_USER_ROLE = "%d_role";
+		private static final String KEY_USER_ROLE_MEMBERS = "%d_role_members";
 		private static final String KEY_USER_ROLE_ACL = "%d_role_acl";
+		private static final String KEY_PUSH_RECV = "PUSH_recv";
+		private static final String KEY_GPS_OPEN = "gps_open";
+		private static final String KEY_ALARM_OPEN = "alarm_open";
+		private static final String KEY_ALARM_SPAN = "alarm_span";
 	
 		private SharedPreferences mSharePF;
 		private Context mContext;
@@ -295,7 +395,46 @@ public class WhereApplication extends FrontiaApplication {
 			mContext = c;
 			mSharePF = PreferenceManager.getDefaultSharedPreferences(mContext);
 		}
-	
+
+		public long pushPuls(){
+			long n = mSharePF.getLong(KEY_PUSH_RECV, 0);
+			save(KEY_PUSH_RECV, n + 1);
+			return n + 1;
+		}
+		private void save(String k, boolean v){
+			Editor edit = mSharePF.edit();
+			edit.putBoolean(k, v);
+			edit.commit();
+		}
+		
+		private void save(String k, long v){
+			Editor edit = mSharePF.edit();
+			edit.putLong(k, v);
+			edit.commit();
+		}
+		
+		public void saveGps(boolean isOpen){
+			save(KEY_GPS_OPEN, isOpen);
+		}
+		public boolean isGpsOpen(){
+			return mSharePF.getBoolean(KEY_GPS_OPEN, true);
+		}
+		public void saveAlarm(boolean isOpen){
+			save(KEY_ALARM_OPEN, isOpen);
+		}
+		public boolean isAlarmOpen(){
+			return mSharePF.getBoolean(KEY_ALARM_OPEN, true);
+		}
+		public void saveAlarmSpan(long second){
+			save(KEY_ALARM_SPAN, second);
+		}
+		public long getAlarmSpan(){
+			return mSharePF.getLong(KEY_ALARM_SPAN, 30);
+		}
+		public long getPushCount(){
+			return mSharePF.getLong(KEY_PUSH_RECV, 0);
+		}
+
 		public FrontiaUser getUser() {
 			String id = mSharePF.getString(KEY_ID, "");
 			if (id.equals("")) {
@@ -331,9 +470,21 @@ public class WhereApplication extends FrontiaApplication {
 			return new RoleInfo(userid, poiId, role, EnumRole.toValue(roleAcl));
 		}
 		
+		public void saveRoleMembers(long userid, String jsonStringRoleMembers ){
+			Editor edit = mSharePF.edit();
+			
+			edit.putString(String.format(KEY_USER_ROLE_MEMBERS, userid), jsonStringRoleMembers);
+			
+			edit.commit();
+		}
+		
+		public String getRoleMembers(long userid){
+			return mSharePF.getString(String.format(KEY_USER_ROLE_MEMBERS, userid), "");
+		}
+		
 		public RoleInfo getRoleInfo(long userid){
 			long poiId = mSharePF.getLong(String.format(KEY_USER_POI_ID, userid), 0);
-			
+
 			if (0 == poiId){
 				return null;
 			}
@@ -354,25 +505,112 @@ public class WhereApplication extends FrontiaApplication {
 			edit.putLong(String.format(KEY_USER_POI_ID, userid), poiId);
 			edit.commit();
 		}
- 
+	}
+	
+//	private PendingIntent mAlarmPendingIntent;
+	public void startlAlarm(){
+		if(!mConfig.isAlarmOpen()){
+			return;
+		}
+
+		Intent alarmIntent = new Intent(this, AlarmReceiver.class);
+		PendingIntent alarmPendingIntent = PendingIntent.getBroadcast(this, AlarmRequestCode, alarmIntent, 0);
+		AlarmManager alarmManager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+
+		Toast.makeText(this, "Alarm Start", Toast.LENGTH_SHORT).show();
+		
+		//设定闹钟的时间
+		long interval = 1 * 1000;
+		alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME, 
+				SystemClock.elapsedRealtime() + interval, 
+				interval, alarmPendingIntent);
+	}
+
+	public void stopAlarm(){
+		Log.i(TAG, "stop Alarm.");
+		Intent alarmIntent = new Intent(this, AlarmReceiver.class);
+		PendingIntent alarmPendingIntent = PendingIntent.getBroadcast(this, AlarmRequestCode, alarmIntent, 0);
+		AlarmManager alarmManager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
+		alarmManager.cancel(alarmPendingIntent);
 	}
 	
 	public void startPush() {
 		FrontiaPush bdPush =  Frontia.getPush();
-
+		if(bdPush.isPushWorking()){
+			bdPush.stop();
+		}
 		if (null == mUser){
 			PushManager.startWork(getApplicationContext(),
 	                PushConstants.LOGIN_TYPE_API_KEY,
 	                ApiKeyConf.BAIDU_APIKEY);
 			Log.d(TAG, "start Push with API-KEY.");
 		} else {
+			
 			bdPush.start(mUser.getAccessToken());
 			Log.d(TAG, "start Push with userAccessToken.");
 		}
 		if(!bdPush.isPushWorking()){
 			bdPush.resume();
+			Log.d(TAG, "resume Push ");
 		}
 	}
+	
+	public void testPushMsg(){
+		// baidu push 非常不第二靠普,根本收不到.
+		FrontiaPush bdPush =  Frontia.getPush();
+		if(!bdPush.isPushWorking()){
+			toastMsg("push not working.");
+			startPush();
+		}
+
+		if(!Utils.hasBind(this)){
+			toastMsg("没绑定!");
+			return;
+		}
+		
+		String userid = Utils.getPushUserId(this);
+		String channelId = Utils.getPushChannelId(this);
+
+		
+		final String content = "发送通知给个人";
+		final String title =   "发送通知给个人";
+		final String mMessageId = "testmsgid";
+		
+		NotificationContent notification = new NotificationContent(title, content);
+
+		FrontiaPushUtil.MessageContent msg = new FrontiaPushUtil.MessageContent(
+				mMessageId, FrontiaPushUtil.DeployStatus.PRODUCTION);
+
+		msg.setNotification(notification);
+
+		bdPush.pushMessage( msg, new PushMessageListener() {
+
+			@Override
+			public void onSuccess(String id) {
+
+                String msg = "push notification:\n" +
+                        "    id: " + id + "\n" +
+                        "    title: " + title + "\n" +
+                        "    content: " + content + "\n";
+				toastMsg(msg);
+			}
+
+			@Override
+			public void onFailure(int errCode, String errMsg) {
+
+                String fail = "Fail to push notification:\n" +
+                        " title: " + title + "\n" +
+                        " content: " + content + "\n" +
+                        " errCode: " + errCode + " errMsg: " + errMsg + "\n";
+                toastMsg(fail);
+			}
+
+		});
+		
+		Log.i(TAG, "testPushMsg end;");
+	}
+	
+	//定位回调
 	public void onLocation(final BDLocation location){
 		if (System.currentTimeMillis() - mLastUpdatePoiTime < Update_Span){
 			return;
@@ -383,8 +621,12 @@ public class WhereApplication extends FrontiaApplication {
 		}
 
 		if (mRoleInfo == null){
-			toastMsg("mRoleInfo is null, pls call getRoleInfo() or getUserLastPoiData()");
-			return;
+			if(mConfig != null){
+				mRoleInfo = mConfig.getRoleInfo(Long.valueOf(mUser.getId()));
+			}
+			//依然为空,直接返回
+			if(null == mRoleInfo)
+				return;
 		}
 		String role = mRoleInfo.role;
 		String roleAcl = EnumRole.toString(mRoleInfo.roleAcl);
@@ -414,11 +656,9 @@ public class WhereApplication extends FrontiaApplication {
 							
 							if(mGetPushMsg){
 								mGetPushMsg = false;
-								if(!mMapActivity.isStartedLocation){
-									mLocClient.stop();
-								}
+								mLocClient.stop();
 							}
-
+							toastMsg("更新位置成功!^_^");
 						}else{
 							Log.e(TAG, "unknow error on updatePoi():" + result.status
 									+ "message:" + result.message);
@@ -438,8 +678,6 @@ public class WhereApplication extends FrontiaApplication {
 	
 
 	private class MyLocationListenner implements BDLocationListener {
-		
-		
 		/**
 		 * 定位SDK监听函数
 		 */

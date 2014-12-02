@@ -8,5 +8,8 @@
         android:orderInCategory="100"
         android:title="@string/action_settings"
         app:showAsAction="never"/>
-
+   <item android:id="@+id/action_switch_account" 
+        android:orderInCategory="100"
+        android:title="@string/action_switch_account"
+        app:showAsAction="never"/>
 </menu>

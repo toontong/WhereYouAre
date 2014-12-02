@@ -1,9 +1,11 @@
 package io.toontong.where;
 
+import java.util.Map;
+
+import io.toontong.where.poi.Callbacker;
+import io.toontong.where.poi.PoiInfoList;
 import io.toontong.where.poi.BaiduPoiClient.RoleInfo;
-
-import java.text.SimpleDateFormat;
-
+import io.toontong.where.push.Utils;
 
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
@@ -16,7 +18,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
 import android.widget.TextView;
+import android.widget.ListView;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -27,13 +32,20 @@ public class MainActivity extends ActionBarActivity {
 	private static final String TAG = "where.Main";
 
 	private TextView mResultTextView;
+	private ListView mUserListView;  
 	private WhereApplication app;
 
+	
+	private boolean isWaitingNetwork;
+	
 	private void showText(String msg) {
 		Log.e(TAG, msg);
 		mResultTextView.setText(msg);
 	}
 
+	private void toastMsg(String msg, int duration) {
+		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+	}
 	private void toastMsg(String msg) {
 		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
 	}
@@ -57,7 +69,7 @@ public class MainActivity extends ActionBarActivity {
 			}
 		}
 	}
-	
+
 	private SDKReceiver mReceiver;
 
 	@Override
@@ -67,21 +79,21 @@ public class MainActivity extends ActionBarActivity {
 		
 		app = (WhereApplication)getApplication();
 		mResultTextView = (TextView) findViewById(R.id.textViewResult);
-		
+		mUserListView = (ListView) findViewById(R.id.userListView);
+		if(mUserListView ==null){
+			toastMsg("mUserListView is null");
+		}
 		setupViews();
-		
+
 		// 注册 SDK 广播监听者
 		IntentFilter iFilter = new IntentFilter();
 		iFilter.addAction(SDKInitializer.SDK_BROADTCAST_ACTION_STRING_PERMISSION_CHECK_ERROR);
 		iFilter.addAction(SDKInitializer.SDK_BROADCAST_ACTION_STRING_NETWORK_ERROR);
 		mReceiver = new SDKReceiver();
 		registerReceiver(mReceiver, iFilter);
-		
-		
-		
-		app.setMainActivity(this);
-		app.startPush();
 
+		app.setMainActivity(this);
+		app.startlAlarm();
 	}
 
 	@Override
@@ -100,39 +112,32 @@ public class MainActivity extends ActionBarActivity {
 			}
 		});
 
-//		Button createPoiBtn = (Button) findViewById(R.id.createPoiBtn);
-//		createPoiBtn.setOnClickListener(new OnClickListener() {
-//			@Override
-//			public void onClick(View v) {
-//					FrontiaUser user = app.getUser();
-//					if( user != null){
-//
-//					}else{
-//						mResultTextView.setText("请先登录!");
-//					}
-//				}
-//			});
-//
-//		Button lastLocaltionBtn = (Button) findViewById(R.id.myLastLocationBtn);
-//		lastLocaltionBtn.setOnClickListener(new OnClickListener() {
-//			@Override
-//			public void onClick(View v) {
-//				FrontiaUser user = app.getUser();
-//				if (user != null) {
-//					
-//				} else {
-//					mResultTextView.setText("请先登录!");
-//				}
-//			}
-//		});
-//
-//		Button createRoleBtn = (Button) findViewById(R.id.createRoleBtn);
-//		createRoleBtn.setOnClickListener(new OnClickListener() {
-//			@Override
-//			public void onClick(View v) {
-//				switchCreateRoleActivity();
-//			}});
-			
+		Button createPoiBtn = (Button) findViewById(R.id.createPoiBtn);
+		createPoiBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+					FrontiaUser user = app.getUser();
+					if( user != null){
+						switchCreateRoleActivity();
+					}else{
+						mResultTextView.setText("请先登录!");
+					}
+				}
+			});
+
+		Button myInformationBtnBtn = (Button) findViewById(R.id.myInformationBtn);
+		myInformationBtnBtn.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				FrontiaUser user = app.getUser();
+				RoleInfo roleInfo = app.getRoleInfoFromLocal();
+				if (user != null || null != roleInfo) {
+					showMyInformation(user, roleInfo);
+				} else {
+					mResultTextView.setText("请先登录!");
+				}
+			}
+		});
 	}
 
 	private void switchLoginActivity(){
@@ -146,19 +151,16 @@ public class MainActivity extends ActionBarActivity {
 	}
 	
 	private void switchMapActivity(){
-		TextView frequence = (TextView) findViewById(R.id.frequence);
-		int span = 3; // default values
-		try {
-			span = Integer.valueOf(frequence.getText().toString());
-		} catch (Exception e) {
-			//空输入, 使用默认值
-		}
-
+		int span = 2; // default values
 		Intent intent = new Intent(MainActivity.this, MapActivity.class);
 		intent.putExtra("span", span);
 		startActivity(intent);
 	}
-
+	
+	public void switchSettingsActivity(){
+		Intent intent = new Intent(MainActivity.this, SettingsActivity.class);
+		startActivity(intent);
+	}
 	/*
 	 * 程序主流程:
 	 * 1). 未登录的 --> 先登录
@@ -189,25 +191,91 @@ public class MainActivity extends ActionBarActivity {
 			this.switchLoginActivity();
 			return;
 		}
-		
-		Log.d(TAG, "mUser not null");
-		StringBuffer sb = new StringBuffer();
-		sb.append("来自[");
-		sb.append(user.getPlatform());
-		sb.append("]的登录用户:\n");
-		sb.append(user.getName());
-		sb.append("\n欢迎使用 Where.\n");
-		sb.append("您所在组为[");
-		sb.append(roleInfo.role);
-		sb.append("],共有成员[n]个.你们之间位置共享.");
-        showText(sb.toString());
-		app.startPush();
 
+		app.startPush();
+		showMyInformation(user, roleInfo);
 	}
 
+	private void showMyInformation(final FrontiaUser user, final RoleInfo roleInfo){
+		if(isWaitingNetwork)
+			return;
+		isWaitingNetwork = true;
+		
+		Log.d(TAG, "showMyInformation");
+		StringBuffer sb = new StringBuffer();
+		
+		String userid = Utils.getPushUserId(this);
+		String channelId = Utils.getPushChannelId(this);
+		sb.append("uid[");
+		sb.append(userid);
+		sb.append("]chnanelId[");
+		sb.append(channelId);
+		sb.append("],来自[");
+		sb.append(user.getPlatform());
+		sb.append("]的登录用户("+app.getPushCount()+"):\n");
+		sb.append(user.getName());
+		sb.append("\n欢迎使用[Where]位置共享 App.\n");
+		mResultTextView.setText(sb.toString());
 
+		app.getRoleMembers(roleInfo.role, new Callbacker<PoiInfoList>(){
+			@Override
+			public void onSuccess(PoiInfoList result){
+				isWaitingNetwork = false;
+				if (user != app.getUser()){
+					//if user changed, do nothing
+					return;
+				}
+				if (result.status != 0) {
+					toastMsg("获取组员信息失败:" + result.message);
+					return;
+				}
 
+				updateUserListView(roleInfo, result);
+			}
 
+			@Override
+			public void onFail(Exception e) {
+				isWaitingNetwork = false;
+				PoiInfoList poiInfos = app.getRoleMembersFromLocal();
+				if (poiInfos != null){
+					Log.w(TAG, "getRoleMembersFromLocal() cache.");
+					updateUserListView(roleInfo, poiInfos);
+				} else{
+					Log.e(TAG, "on getPoiByUserRole():" + e.toString());
+					toastMsg("获取组员信息失败,请稍后再试!0x006", Toast.LENGTH_SHORT);
+				}
+			}
+		});
+	}
+	
+	private void updateUserListView(final RoleInfo roleInfo, PoiInfoList result) {
+		StringBuffer sb = new StringBuffer();
+		sb.append(mResultTextView.getText());
+		sb.append("您所在组为[");
+		sb.append(roleInfo.role);
+		sb.append("],共有成员[" + result.size + "]人");
+		mResultTextView.setText(sb.toString());
+		app.saveRoleMembers(result);
+		
+		UserListViewAdapter uLstView = new UserListViewAdapter(MainActivity.this, result);
+		mUserListView.setAdapter(uLstView);
+		
+		mUserListView.setOnItemClickListener(new OnItemClickListener() {
+			@Override
+			public void onItemClick(AdapterView<?> adapterView,
+					View view, int position, long id) {
+
+				@SuppressWarnings("unchecked")
+				Map<String, Object> item = (Map<String, Object>) mUserListView
+						.getItemAtPosition(position);
+
+				toastMsg(item.get(UserListViewAdapter.Map_Key_Nickname)
+						.toString());
+				
+				app.testPushMsg();
+			}
+		});
+	}
 	@Override
 	protected void onResume() {
 		Log.d(TAG, "onResume");
@@ -229,6 +297,9 @@ public class MainActivity extends ActionBarActivity {
 		// as you specify a parent activity in AndroidManifest.xml.
 		int id = item.getItemId();
 		if (id == R.id.action_settings) {
+			switchSettingsActivity();
+			return true;
+		}else if(id == R.id.action_switch_account){
 			switchLoginActivity();
 			return true;
 		}

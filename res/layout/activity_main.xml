@@ -11,52 +11,51 @@
     tools:context="io.toontong.where.MainActivity" >
 
         <TextView
-            android:id="@+id/textView1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/locationSpan"
-            android:textAppearance="?android:attr/textAppearanceLarge" />
-
-        <EditText
-            android:id="@+id/frequence"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:hint="@string/locationSpanVaule"
-            android:inputType="number" >
-
-            <requestFocus />
-        </EditText>
-        
-        <Button
-            android:id="@+id/startLocalBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/openMap" />
-
-        <Button
-            android:id="@+id/createPoiBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/createPoi" />
-                
-        <Button
-            android:id="@+id/myLastLocationBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/myLastLocation" />
-
-        <Button
-            android:id="@+id/createRoleBtn"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="创建组" />
-
-        <TextView
             android:id="@+id/textViewResult"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            
+            android:layout_weight="0"
             android:textAppearance="?android:attr/textAppearanceLarge" />
+
+            <ListView
+                android:id="@+id/userListView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:scrollbarAlwaysDrawVerticalTrack="true" >
+
+            </ListView>
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:layout_marginBottom="0dp"
+            android:layout_marginTop="0dp"
+            android:orientation="horizontal" >
+
+            <Button
+                android:id="@+id/myInformationBtn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/myInformation" />
+
+            <Button
+                android:id="@+id/createPoiBtn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/changedRole" />
+
+            <Button
+                android:id="@+id/startLocalBtn"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/openMap" />
+
+        </LinearLayout>
 
 </LinearLayout>

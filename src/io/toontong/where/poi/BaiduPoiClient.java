@@ -257,7 +257,7 @@ public class BaiduPoiClient {
 				callback.onFail(retrofitError);
 			}
 		};
-		mInstance.getPoiByUserId(
+		mInstance.getPoiByRole(
 			ACCESS_KEY,
 			mGeoTableID,
 			role,
