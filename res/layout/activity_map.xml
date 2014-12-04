@@ -8,13 +8,32 @@
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
         android:clickable="true" />
-    
     <Button
         android:id="@+id/modeBtn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_marginBottom="56dp" />
+    
+    <HorizontalScrollView
+        android:id="@+id/horizontalScrollView1"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_alignParentLeft="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentTop="true"
-        android:layout_marginRight="20dip"
-        android:layout_marginTop="10dip" />
+        android:layout_margin="4dp"
+        >
+
+        <LinearLayout
+            android:id="@+id/userHoriLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingRight="10dp" >
+
+        </LinearLayout>
+    </HorizontalScrollView>
+
 </RelativeLayout>

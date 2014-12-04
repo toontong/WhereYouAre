@@ -92,7 +92,7 @@
                 <data android:scheme="package" />
             </intent-filter>
         </receiver>
-        <service
+        <!--<service
             android:permission="oem.permission.SENDMAIL"
             android:name="com.baidu.android.pushservice.PushService"
             android:exported="true"
@@ -101,7 +101,7 @@
                 <action android:name="com.baidu.android.pushservice.action.PUSH_SERVICE" />
             </intent-filter>
         </service>
-        <!-- push结束 -->
+         push结束 -->
     
         <receiver android:name="io.toontong.where.AlarmReceiver"></receiver>
         

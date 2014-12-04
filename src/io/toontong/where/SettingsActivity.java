@@ -18,8 +18,17 @@ public class SettingsActivity extends Activity{
 	private WhereApplication app;
 	private Switch switchGPS;
 	private Switch switchAlarm;
-	private NumberPicker numPicker;
+	private NumberPicker numPickerHour;
+	private NumberPicker numPickerMin;
+	private NumberPicker numPickerSecond;
 
+	private void setNumberPickerVisiable(boolean isVisiable){
+		int visiable = isVisiable ? View.VISIBLE :View.INVISIBLE;
+		numPickerHour.setVisibility(visiable);
+		numPickerMin.setVisibility(visiable);
+		numPickerSecond.setVisibility(visiable);
+	}
+	
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -27,12 +36,39 @@ public class SettingsActivity extends Activity{
 		app = (WhereApplication)getApplication();
 		switchGPS = (Switch)findViewById(R.id.switch_gps);
 		switchAlarm = (Switch)findViewById(R.id.switch_alarm);
-		numPicker = (NumberPicker)findViewById(R.id.numberPicker_Alarm);
+
+		numPickerHour = (NumberPicker)findViewById(R.id.numberPicker_hour);
+		numPickerMin = (NumberPicker)findViewById(R.id.numberPicker_min);
+		numPickerSecond = (NumberPicker)findViewById(R.id.numberPicker_second);
 		
-		numPicker.setMaxValue(65535);
-		numPicker.setValue((int)app.getConfig().getAlarmSpan() / 1000);
+		numPickerHour.setMaxValue(23);
+		numPickerMin.setMaxValue(59);
+		numPickerSecond.setMaxValue(59);
+
+		int spanSecond  =(int)app.getConfig().getAlarmSpan();
+		numPickerHour.setValue(spanSecond / 3600);
+		numPickerMin.setValue((spanSecond % 3600 ) / 60);
+		numPickerSecond.setValue(spanSecond % 3600 % 60);
+		
+		setNumberPickerVisiable(app.getConfig().isAlarmOpen());
+		
 		switchGPS.setChecked(app.getConfig().isGpsOpen());
 		switchAlarm.setChecked(app.getConfig().isAlarmOpen());
+
+		OnValueChangeListener numberChangeListener = new OnValueChangeListener(){
+			@Override
+			public void onValueChange(NumberPicker picker, int oldVal,
+					int newVal) {
+				int hour = numPickerHour.getValue();
+				int min = numPickerMin.getValue();
+				int sec  = numPickerSecond.getValue();
+				app.getConfig().saveAlarmSpan(hour * 3600 + min *60 + sec);
+			}
+		};
+		
+		numPickerHour.setOnValueChangedListener(numberChangeListener);
+		numPickerMin.setOnValueChangedListener(numberChangeListener);
+		numPickerSecond.setOnValueChangedListener(numberChangeListener);
 
 		switchGPS.setOnCheckedChangeListener(new OnCheckedChangeListener() {  
 			@Override
@@ -43,25 +79,17 @@ public class SettingsActivity extends Activity{
 					app.stopLocation();
 			}
 		});
-	
+
 		switchAlarm.setOnCheckedChangeListener(new OnCheckedChangeListener() {  
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView,
 					boolean isChecked) {
 				app.getConfig().saveAlarm(isChecked);
 				if(isChecked) 
-					app.startlAlarm();
+					app.startlAlarm(10);
 				else 
 					app.stopAlarm();
-			}
-		});
-
-		numPicker.setOnValueChangedListener(new OnValueChangeListener(){
-			@Override
-			public void onValueChange(NumberPicker picker, int oldVal,
-					int newVal) {
-				Log.i(TAG, "NumberPicker old(" + oldVal + "),new[" + newVal + "].");
-				app.getConfig().saveAlarmSpan(newVal * 1000);
+				setNumberPickerVisiable(isChecked);
 			}
 		});
 

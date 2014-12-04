@@ -53,6 +53,7 @@ public class WhereApplication extends FrontiaApplication {
 	private BaiduPoiClient mBDPoiCli;
 	private MainActivity mMainActivity;
 	private CreateRoleActivity mRoleActivity; 
+	private PoiInfo mMapCenterPoi;
 
 	// 定位相关
 	private LocationClient mLocClient;
@@ -60,7 +61,7 @@ public class WhereApplication extends FrontiaApplication {
 	
 	private PoiInfo mLastPoi;
 	private long mLastUpdatePoiTime;
-	private static final long Update_Span = 1 * 1000; // 30 second
+	private static final long Update_Span = 30 * 1000; // 30 second
 	private RoleInfo mRoleInfo;
 
 	private boolean mIsGettingPoi; // 当调用网络API-Get-Poi时,可能比较耗时,防止并发
@@ -118,7 +119,9 @@ public class WhereApplication extends FrontiaApplication {
 			}
 		});
 	}
-
+	public long getLastUpdatePoiTime(){
+		return mLastUpdatePoiTime;
+	}
 	/**
 	 * @return null if user did no Login-Auth.
 	 */
@@ -285,6 +288,10 @@ public class WhereApplication extends FrontiaApplication {
 		});
 	}
 	
+	private void getUserPoi(long poiId,final Callbacker<PoiInfo> callback){
+		
+	}
+	
 	/**
 	 * 用户第一次登录成功后,在LBS云中创建一条记录,同时相当于新注册用户
 	 * @param poiID
@@ -387,6 +394,7 @@ public class WhereApplication extends FrontiaApplication {
 		private static final String KEY_GPS_OPEN = "gps_open";
 		private static final String KEY_ALARM_OPEN = "alarm_open";
 		private static final String KEY_ALARM_SPAN = "alarm_span";
+		private static final String KEY_ALARM_RUNNING = "alarm_running";
 	
 		private SharedPreferences mSharePF;
 		private Context mContext;
@@ -401,6 +409,10 @@ public class WhereApplication extends FrontiaApplication {
 			save(KEY_PUSH_RECV, n + 1);
 			return n + 1;
 		}
+		public long getPushCount(){
+			return mSharePF.getLong(KEY_PUSH_RECV, 0);
+		}
+		
 		private void save(String k, boolean v){
 			Editor edit = mSharePF.edit();
 			edit.putBoolean(k, v);
@@ -431,10 +443,13 @@ public class WhereApplication extends FrontiaApplication {
 		public long getAlarmSpan(){
 			return mSharePF.getLong(KEY_ALARM_SPAN, 30);
 		}
-		public long getPushCount(){
-			return mSharePF.getLong(KEY_PUSH_RECV, 0);
-		}
-
+		public  boolean hasAlarmStarted(){
+			return mSharePF.getBoolean(KEY_ALARM_RUNNING, false);
+		} 
+		public void setAlarmStatus(boolean running){
+			save(KEY_ALARM_RUNNING, running);
+		} 
+		
 		public FrontiaUser getUser() {
 			String id = mSharePF.getString(KEY_ID, "");
 			if (id.equals("")) {
@@ -508,22 +523,31 @@ public class WhereApplication extends FrontiaApplication {
 	}
 	
 //	private PendingIntent mAlarmPendingIntent;
-	public void startlAlarm(){
-		if(!mConfig.isAlarmOpen()){
+	/**
+	 * @param interval 重复间隔
+	 */
+	public void startlAlarm(long intervalSecond){
+		if(!mConfig.isAlarmOpen() || mConfig.hasAlarmStarted()){
 			return;
 		}
-
+		Log.i(TAG, "start alarm.");
 		Intent alarmIntent = new Intent(this, AlarmReceiver.class);
-		PendingIntent alarmPendingIntent = PendingIntent.getBroadcast(this, AlarmRequestCode, alarmIntent, 0);
+		PendingIntent alarmPendingIntent = PendingIntent.
+				getBroadcast(this, AlarmRequestCode, alarmIntent, 0);
 		AlarmManager alarmManager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
 
 		Toast.makeText(this, "Alarm Start", Toast.LENGTH_SHORT).show();
 		
-		//设定闹钟的时间
-		long interval = 1 * 1000;
+		//设定闹钟的时间[10秒~12小时]
+		if(intervalSecond <= 10){
+			intervalSecond = 10;
+		} else if(intervalSecond >= 24 * 3600){
+			intervalSecond = 12 * 3600;
+		}
 		alarmManager.setRepeating(AlarmManager.ELAPSED_REALTIME, 
-				SystemClock.elapsedRealtime() + interval, 
-				interval, alarmPendingIntent);
+				SystemClock.elapsedRealtime() + intervalSecond  * 1000, 
+				intervalSecond, alarmPendingIntent);
+		mConfig.setAlarmStatus(true);
 	}
 
 	public void stopAlarm(){
@@ -532,6 +556,7 @@ public class WhereApplication extends FrontiaApplication {
 		PendingIntent alarmPendingIntent = PendingIntent.getBroadcast(this, AlarmRequestCode, alarmIntent, 0);
 		AlarmManager alarmManager = (AlarmManager)getSystemService(Context.ALARM_SERVICE);
 		alarmManager.cancel(alarmPendingIntent);
+		mConfig.setAlarmStatus(false);
 	}
 	
 	public void startPush() {
@@ -616,7 +641,7 @@ public class WhereApplication extends FrontiaApplication {
 			return;
 		}
 		if (mUser == null){
-			toastMsg("先登录.0x005");
+			Log.w(TAG, "onLocation() - 未登录.");
 			return;
 		}
 
@@ -658,6 +683,7 @@ public class WhereApplication extends FrontiaApplication {
 								mGetPushMsg = false;
 								mLocClient.stop();
 							}
+							Log.d(TAG, "更新位置成功!^_^");
 							toastMsg("更新位置成功!^_^");
 						}else{
 							Log.e(TAG, "unknow error on updatePoi():" + result.status
@@ -665,18 +691,29 @@ public class WhereApplication extends FrontiaApplication {
 							toastMsg("更新位置失败:" + result.message);
 						}
 					}
-					
+
 					@Override
 					public void onFail(Exception e) {
 						//TODO:;
+						if(mGetPushMsg){
+							mGetPushMsg = false;
+							mLocClient.stop();
+						}
 						Log.e(TAG, "on updatePoi():" + e.toString());
-						toastMsg("updatePoi().onFail 更新位置失败:" + e.toString());
+						toastMsg("更新位置失败.");
 					}
 				});
 		Log.d(TAG, "end app.onLocation()");
 	}
 	
 
+	public PoiInfo getMapCenterPoi() {
+		return mMapCenterPoi;
+	}
+
+	public void setMapCenterPoi(PoiInfo mMapCenterPoi) {
+		this.mMapCenterPoi = mMapCenterPoi;
+	}
 	private class MyLocationListenner implements BDLocationListener {
 		/**
 		 * 定位SDK监听函数
@@ -686,7 +723,7 @@ public class WhereApplication extends FrontiaApplication {
 			LatLng ll = new LatLng(location.getLatitude(),
 						location.getLongitude());
 	
-			Log.e(TAG, "LocationListenner callback." + ll.toString());
+			Log.d(TAG, "LocationListenner callback." + ll.toString());
 
 			WhereApplication.this.onLocation(location);
 		}

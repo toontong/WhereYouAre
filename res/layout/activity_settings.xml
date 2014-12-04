@@ -26,23 +26,53 @@
             android:layout_alignParentRight="true"
             android:text="使用GPS定位" />
 
-        <NumberPicker
-            android:id="@+id/numberPicker_Alarm"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_centerVertical="true"
-            android:layout_marginRight="22dp" />
-
         <TextView
-            android:id="@+id/textView1"
+            android:id="@+id/textView_split1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_centerVertical="true"
-            android:text="上报时间间隔(秒)"
+            android:text="更新 间隔"
             android:textAppearance="?android:attr/textAppearanceLarge" />
 
+        <NumberPicker
+            android:id="@+id/numberPicker_hour"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/textView_split1" />
+
+        <TextView
+            android:id="@+id/textView_split2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/numberPicker_hour"
+            android:text=":"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <NumberPicker
+            android:id="@+id/numberPicker_min"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/textView_split2" />
+
+        <TextView
+            android:id="@+id/textView_split3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/numberPicker_min"
+            android:text=":"
+            android:textAppearance="?android:attr/textAppearanceLarge" />
+
+        <NumberPicker
+            android:id="@+id/numberPicker_second"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@+id/textView_split3" />
     </RelativeLayout>
 
     <LinearLayout
@@ -55,7 +85,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/back" />
-
     </LinearLayout>
-    
+
 </LinearLayout>

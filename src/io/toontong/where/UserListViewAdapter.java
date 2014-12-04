@@ -56,7 +56,7 @@ public class UserListViewAdapter extends BaseAdapter {
 
 			item.put(Map_Key_Image, R.drawable.head_00 + (int)(poi.userid % 10));
 			item.put(Map_Key_Nickname, poi.nickname);
-			item.put(Map_Key_Info,  poi.modify_time + " at " + poiInfos.pois.get(i).city);
+			item.put(Map_Key_Info,  poi.modify_time + " at " +  poi.district);
 			item.put(Map_Key_Userid, poi.userid);
 			item.put(Map_Key_PoiId, poi.id);
 
@@ -93,7 +93,7 @@ public class UserListViewAdapter extends BaseAdapter {
 		listItemView.imgHead.setBackgroundResource((Integer) item.get(Map_Key_Image));
 		listItemView.title.setText((String) item.get(Map_Key_Nickname));
 		listItemView.info.setText((String) item.get(Map_Key_Info));
-		
+
 		return convertView;
 	}
 

@@ -5,6 +5,7 @@ import java.util.Map;
 import io.toontong.where.poi.Callbacker;
 import io.toontong.where.poi.PoiInfoList;
 import io.toontong.where.poi.BaiduPoiClient.RoleInfo;
+import io.toontong.where.poi.PoiInfoList.PoiInfo;
 import io.toontong.where.push.Utils;
 
 import android.support.v7.app.ActionBarActivity;
@@ -43,11 +44,8 @@ public class MainActivity extends ActionBarActivity {
 		mResultTextView.setText(msg);
 	}
 
-	private void toastMsg(String msg, int duration) {
-		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
-	}
 	private void toastMsg(String msg) {
-		Toast.makeText(this, msg, Toast.LENGTH_LONG).show();
+		Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 	}
 
 	/**
@@ -93,7 +91,7 @@ public class MainActivity extends ActionBarActivity {
 		registerReceiver(mReceiver, iFilter);
 
 		app.setMainActivity(this);
-		app.startlAlarm();
+		app.startlAlarm(10);
 	}
 
 	@Override
@@ -151,7 +149,7 @@ public class MainActivity extends ActionBarActivity {
 	}
 	
 	private void switchMapActivity(){
-		int span = 2; // default values
+		int span = 5; // default values
 		Intent intent = new Intent(MainActivity.this, MapActivity.class);
 		intent.putExtra("span", span);
 		startActivity(intent);
@@ -203,16 +201,6 @@ public class MainActivity extends ActionBarActivity {
 		
 		Log.d(TAG, "showMyInformation");
 		StringBuffer sb = new StringBuffer();
-		
-		String userid = Utils.getPushUserId(this);
-		String channelId = Utils.getPushChannelId(this);
-		sb.append("uid[");
-		sb.append(userid);
-		sb.append("]chnanelId[");
-		sb.append(channelId);
-		sb.append("],来自[");
-		sb.append(user.getPlatform());
-		sb.append("]的登录用户("+app.getPushCount()+"):\n");
 		sb.append(user.getName());
 		sb.append("\n欢迎使用[Where]位置共享 App.\n");
 		mResultTextView.setText(sb.toString());
@@ -242,13 +230,13 @@ public class MainActivity extends ActionBarActivity {
 					updateUserListView(roleInfo, poiInfos);
 				} else{
 					Log.e(TAG, "on getPoiByUserRole():" + e.toString());
-					toastMsg("获取组员信息失败,请稍后再试!0x006", Toast.LENGTH_SHORT);
+					toastMsg("获取组员信息失败,请稍后再试!0x006");
 				}
 			}
 		});
 	}
 	
-	private void updateUserListView(final RoleInfo roleInfo, PoiInfoList result) {
+	private void updateUserListView(final RoleInfo roleInfo, final PoiInfoList result) {
 		StringBuffer sb = new StringBuffer();
 		sb.append(mResultTextView.getText());
 		sb.append("您所在组为[");
@@ -265,14 +253,13 @@ public class MainActivity extends ActionBarActivity {
 			public void onItemClick(AdapterView<?> adapterView,
 					View view, int position, long id) {
 
-				@SuppressWarnings("unchecked")
-				Map<String, Object> item = (Map<String, Object>) mUserListView
-						.getItemAtPosition(position);
-
-				toastMsg(item.get(UserListViewAdapter.Map_Key_Nickname)
-						.toString());
-				
-				app.testPushMsg();
+				PoiInfo poi = result.pois.get(position);
+				if (null == poi){
+					Log.e(TAG, "get(" + position + ") poi is null, on OnListViewItemClickListener");
+					return;
+				}
+				app.setMapCenterPoi(poi);
+				switchMapActivity();
 			}
 		});
 	}

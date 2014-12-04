@@ -17,9 +17,18 @@ public class AlarmReceiver extends BroadcastReceiver {
 	@Override
 	public void onReceive(Context context, Intent intent) {
 		// TODO Auto-generated method stub
-		WhereApplication app = (WhereApplication)context.getApplicationContext();
 		
-		if (System.currentTimeMillis() - mLastAlarmTime < app.getConfig().getAlarmSpan()){
+		long now = System.currentTimeMillis();
+		WhereApplication app = (WhereApplication)context.getApplicationContext();
+		long span = app.getConfig().getAlarmSpan() * 1000;
+
+		if(now - app.getLastUpdatePoiTime() < span){
+			Log.d(TAG, "update poi just now .");
+			return;
+		}
+		
+		
+		if ((now - mLastAlarmTime) < span){
 			Log.d(TAG, "Alarm Recvier less min-span, do nothing.");
 			return;
 		}
@@ -28,12 +37,12 @@ public class AlarmReceiver extends BroadcastReceiver {
 
 		Calendar calendar = Calendar.getInstance();
 		DateFormat dateFormat = SimpleDateFormat.getTimeInstance();
-		String now = dateFormat.format(calendar.getTime());
+		String nows = dateFormat.format(calendar.getTime());
 
 		mLastAlarmTime = System.currentTimeMillis(); 
 		
 		if(app  != null){
-			app.onMessageReceived(now);
+			app.onMessageReceived(nows);
 		}
 		
 	}
