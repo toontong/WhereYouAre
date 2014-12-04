@@ -1,12 +1,10 @@
 package io.toontong.where;
 
-import java.util.Map;
 
 import io.toontong.where.poi.Callbacker;
 import io.toontong.where.poi.PoiInfoList;
 import io.toontong.where.poi.BaiduPoiClient.RoleInfo;
 import io.toontong.where.poi.PoiInfoList.PoiInfo;
-import io.toontong.where.push.Utils;
 
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;

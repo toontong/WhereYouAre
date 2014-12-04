@@ -2,6 +2,7 @@ package io.toontong.where;
 
 import android.app.Activity;
 import android.content.Intent;
+
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,12 +14,10 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
 import com.baidu.location.LocationClient;
-import com.baidu.location.LocationClientOption;
 
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptor;
@@ -28,7 +27,6 @@ import com.baidu.mapapi.map.MapStatus;
 import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
-import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationConfiguration.LocationMode;
@@ -164,7 +162,7 @@ public class MapActivity extends Activity {
 	}
 
 	private LinearLayout createUserView(final PoiInfo poi){
-		//TODO: 把头像改成圆角图
+
 		LinearLayout layout = new LinearLayout(getApplicationContext());
 		layout.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
 				LayoutParams.WRAP_CONTENT));
@@ -177,7 +175,12 @@ public class MapActivity extends Activity {
 		imageView.setMaxWidth(80);
 		imageView.setLayoutParams(new LayoutParams(LayoutParams.WRAP_CONTENT,
 				LayoutParams.WRAP_CONTENT));
-		imageView.setImageResource(R.drawable.head_00 + (int)(poi.userid % 10));
+
+		RoundCornerImage.setRoundCornerImage(imageView,
+				R.drawable.head_00 + (int)(poi.userid % 10), 80.0f);
+
+
+//		imageView.setImageResource(R.drawable.head_00 + (int)(poi.userid % 10));
 //		imageView.setBackgroundResource(R.drawable.head_00 + (int)(poi.userid % 10));
 
 		TextView txtName = new TextView(getApplicationContext());
@@ -215,7 +218,10 @@ public class MapActivity extends Activity {
 
 		mBaiduMap.showInfoWindow(new InfoWindow(layout, latlng, -47));
 	}
+	
 
+
+	
 	public class MyLocationListenner implements BDLocationListener {
 		/**
 		 * 定位SDK监听函数

@@ -6,6 +6,15 @@ import java.util.List;
 import java.util.Map;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.Bitmap.Config;
+import android.graphics.PorterDuff.Mode;
 
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -89,14 +98,16 @@ public class UserListViewAdapter extends BaseAdapter {
 
 		// 设置文字和图片
 		Map<String, Object> item = mListItems.get(position);
-		
-		listItemView.imgHead.setBackgroundResource((Integer) item.get(Map_Key_Image));
+
+		RoundCornerImage.setRoundCornerImage(listItemView.imgHead,
+				(Integer) item.get(Map_Key_Image), 16.0f);
 		listItemView.title.setText((String) item.get(Map_Key_Nickname));
 		listItemView.info.setText((String) item.get(Map_Key_Info));
 
 		return convertView;
 	}
 
+	
 	@Override
 	public int getCount() {
 		return mListItems.size();
